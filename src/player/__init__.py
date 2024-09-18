@@ -3,7 +3,7 @@
 from src.concurrency import POKE_LOOP
 from src.player import utils
 from src.player.baselines import MaxBasePowerPlayer, HeuristicsPlayer, RandomPlayer
-from src.player.gpt_player import LLMPlayer
+from src.player.gpt_player import GPTPlayer
 from src.player.battle_order import (
     BattleOrder,
     DefaultBattleOrder,

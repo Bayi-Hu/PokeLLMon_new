@@ -4,11 +4,12 @@ import numpy as np
 import os
 import pickle as pkl
 import argparse
+from client.account_configuration import AccountConfiguration
 
-from src.player import LLMPlayer, HeuristicsPlayer
+from src.player import GPTPlayer, HeuristicsPlayer
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--backend", type=str, default="gpt-4-0125", choices=["gpt-3.5-turbo-0125", "gpt-4-1106", "gpt-4-0125"])
+parser.add_argument("--backend", type=str, default="gpt-4o-mini", choices=["gpt-4o-2024-08-06", "gpt-4o-mini", "gpt-3.5-turbo-0125", "gpt-4-1106", "gpt-4-0125"])
 parser.add_argument("--temperature", type=float, default=0.8)
 parser.add_argument("--prompt_algo", default="io", choices=["io", "sc", "cot", "tot"])
 parser.add_argument("--log_dir", type=str, default="./battle_log/pokellmon_vs_bot")
@@ -19,13 +20,13 @@ async def main():
     heuristic_player = HeuristicsPlayer(battle_format="gen8randombattle")
 
     os.makedirs(args.log_dir, exist_ok=True)
-    llm_player = LLMPlayer(battle_format="gen8randombattle",
+    llm_player = GPTPlayer(battle_format="gen8randombattle",
                            api_key=os.getenv("OPENAI_API_KEY"),
                            backend=args.backend,
                            temperature=args.temperature,
                            prompt_algo=args.prompt_algo,
                            log_dir=args.log_dir,
-                           # account_configuration=AccountConfiguration("Your_account", "Your_password"),
+                           account_configuration=AccountConfiguration("test_player926", "123456"),
                            save_replays=args.log_dir
                            )
 
