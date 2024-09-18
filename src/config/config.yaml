@@ -1,0 +1,73 @@
+# Generation for Pokemon Battles
+battle_format: "gen8randombattle"
+
+# name for this experiment in the local run directory and on wandb
+exp_name: ???
+
+# the batch size for training; for FSDP, the batch size per GPU is batch_size / (grad_accumulation_steps * num_gpus)
+batch_size: 4
+
+# wandb configuration
+wandb:
+  enabled: true
+  entity: null
+  project: "PokeLLMon"
+
+# to create the local run directory and cache models/datasets,
+#   we will try each of these directories in order; if none exist,
+#   we will create the last one and use it
+local_dirs: ckpt_dir
+
+# whether to eval at the very beginning of training
+do_first_eval: true
+
+# an OmegaConf resolver that returns the local run directory, calling a function in utils.py
+local_run_dir: ${get_local_run_dir:${exp_name},${local_dirs}}
+
+# the learning rate
+lr: 5e-7
+
+# number of steps to accumulate over for each batch
+#   (e.g. if batch_size=4 and gradient_accumulation_steps=2, then we will
+#   accumulate gradients over 2 microbatches of size 2)
+gradient_accumulation_steps: 1
+
+# the maximum gradient norm to clip to
+max_grad_norm: 10.0
+
+# the maximum allowed length for an input
+max_length: 1024
+
+# the maximum allowed length for output
+max_output_length: 200
+
+# The optimizer to use; we use RMSprop because it works about as well as Adam and is more memory-efficient
+optimizer: RMSprop
+
+# number of linear warmup steps for the learning rate
+warmup_steps: 150
+
+# whether or not to use activation/gradient checkpointing
+activation_checkpointing: false
+
+# evaluate model every eval_every steps
+eval_every: 2_000
+
+# save model
+save_every: null
+
+# prevent wandb from logging more than once per minimum_log_interval_secs
+minimum_log_interval_secs: 1.0
+
+# reward model ckpt_dir
+reward_model: ../QPO/ckpt_dir/llama7b_reward_model_lr1e-5_20240722_0015/LATEST/rm.pt
+
+# the generated file for scoring
+generated_file: null
+
+# target for reward
+target: null
+
+defaults:
+- _self_
+- model: gpt2 # basic model configuration
