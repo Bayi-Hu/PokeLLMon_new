@@ -2,3 +2,4 @@ websockets
 openai
 gymnasium
 orjson
+hydra-core==1.3.2

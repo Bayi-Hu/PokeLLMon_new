@@ -100,20 +100,17 @@ def move_type_damage_wraper(pokemon, type_chart, constraint_type_list=None):
 
 class GPTPlayer(Player):
     def __init__(self,
-                 battle_format,
+                 config,
                  api_key="",
-                 backend="gpt-4-1106-preview",
-                 temperature=0.8,
-                 prompt_algo="io",
-                 log_dir=None,
-                 team=None,
-                 save_replays=None,
+                 backend="",
+                 prompt_algo="",
+                 save_replay_dir="",
                  account_configuration=None,
                  server_configuration=None):
 
-        super().__init__(battle_format=battle_format,
-                         team=team,
-                         save_replays=save_replays,
+        super().__init__(battle_format=config.battle_format,
+                         team=None,
+                         save_replays=save_replay_dir,
                          account_configuration=account_configuration,
                          server_configuration=server_configuration)
 
@@ -122,11 +119,14 @@ class GPTPlayer(Player):
         self.completion_tokens = 0
         self.prompt_tokens = 0
         self.backend = backend
-        self.temperature = temperature
-        self.log_dir = log_dir
+        self.temperature = config.temperature
+        self.save_replay_dir = save_replay_dir
         self.api_key = api_key
         self.prompt_algo = prompt_algo
-        self.gen = GenData.from_format(battle_format)
+        self.config = config
+        self.gen = GenData.from_format(config.battle_format)
+        self.except_cnt = 0
+        self.total_cnt = 0
 
         with open("src/data/static/moves/moves_effect.json", "r") as f:
             self.move_effect = json.load(f)
@@ -222,9 +222,9 @@ class GPTPlayer(Player):
         return False
 
 
-    def state_translate(self, battle: AbstractBattle, config):
+    def state_translate(self, battle: AbstractBattle):
 
-        n_turn = config.T
+        n_turn = self.config.T
         if "p1" in list(battle.team.keys())[0]:
             context_prompt = (f"Historical turns:\n" + "\n".join(
                 battle.battle_msg_history.split("[sep]")[-1 * (n_turn + 1):]).
@@ -334,10 +334,10 @@ class GPTPlayer(Player):
         active_pokemon_prompt = (
             f"Your current pokemon:{battle.active_pokemon.species},Type:{active_type},HP:{active_hp_fraction}%," +
             (f"Status:{self.check_status(active_status)}," if self.check_status(active_status) else "" ) +
-            (f"Atk:{opponent_stats['atk']}," if opponent_boosts['atk'] == 0 else f"Atk:{round(opponent_stats['atk'] * self.boost_multiplier('atk', opponent_boosts['atk']))}({opponent_boosts['atk']} stage),") +
-            (f"Def:{opponent_stats['def']}," if opponent_boosts['def'] == 0 else f"Def:{round(opponent_stats['def'] * self.boost_multiplier('def', opponent_boosts['def']))}({opponent_boosts['def']} stage),") +
-            (f"Spa:{opponent_stats['spa']}," if opponent_boosts['spa'] == 0 else f"Spa:{round(opponent_stats['spa'] * self.boost_multiplier('spa', opponent_boosts['spa']))}({opponent_boosts['spa']} stage),") +
-            (f"Spd:{opponent_stats['spd']}," if opponent_boosts['spd'] == 0 else f"Spd:{round(opponent_stats['spd'] * self.boost_multiplier('spd', opponent_boosts['spd']))}({opponent_boosts['spd']} stage),") +
+            (f"Atk:{active_stats['atk']}," if active_boosts['atk'] == 0 else f"Atk:{round(active_stats['atk'] * self.boost_multiplier('atk', active_boosts['atk']))}({active_boosts['atk']} stage),") +
+            (f"Def:{active_stats['def']}," if active_boosts['def'] == 0 else f"Def:{round(active_stats['def'] * self.boost_multiplier('def', active_boosts['def']))}({active_boosts['def']} stage),") +
+            (f"Spa:{active_stats['spa']}," if active_boosts['spa'] == 0 else f"Spa:{round(active_stats['spa'] * self.boost_multiplier('spa', active_boosts['spa']))}({active_boosts['spa']} stage),") +
+            (f"Spd:{active_stats['spd']}," if active_boosts['spd'] == 0 else f"Spd:{round(active_stats['spd'] * self.boost_multiplier('spd', active_boosts['spd']))}({active_boosts['spd']} stage),") +
             (f"Spe:{active_stats['spe']}" if active_boosts['spe']==0 else f"Spe:{round(active_stats['spe']*self.boost_multiplier('spe', active_boosts['spe']))}({active_boosts['spe']} stage)")
         )
 
@@ -390,27 +390,27 @@ class GPTPlayer(Player):
                             f"Power:{power},Acc:{round(move.accuracy * self.boost_multiplier('accuracy', active_boosts['accuracy'])*100)}%"
                             )
             # add knowledge
-            if config.knowledge:
+            if self.config.knowledge:
                 try:
                     effect = self.move_effect[move.id]
                 except:
                     effect = ""
-                move_prompt += f",Effect:{effect}\n"
+                move_prompt += f",$Effect:{effect}$\n"
             else:
                 move_prompt += "\n"
 
         # add knowledge
-        if config.knowledge:
+        if self.config.knowledge:
             opponent_move_type_damage_prompt = move_type_damage_wraper(battle.opponent_active_pokemon,
                                                                        self.gen.type_chart,
                                                                        team_move_type)
             if opponent_move_type_damage_prompt:
-                opponent_prompt = opponent_prompt + opponent_move_type_damage_prompt + "\n"
+                opponent_prompt = opponent_prompt + "$" + opponent_move_type_damage_prompt + "$" + "\n"
 
             active_move_type_damage_prompt = move_type_damage_wraper(battle.active_pokemon, self.gen.type_chart,
                                                                      opponent_type_list)
             if active_move_type_damage_prompt:
-                active_pokemon_prompt = active_pokemon_prompt + active_move_type_damage_prompt + "\n"
+                active_pokemon_prompt = active_pokemon_prompt + "$" + active_move_type_damage_prompt+ "$" + "\n"
 
         # Switch
         if len(battle.available_switches) > 0:
@@ -625,7 +625,7 @@ class GPTPlayer(Player):
                                               json_format=True)
                     print("LLM output:", llm_output)
                     next_action = self.parse(llm_output, battle)
-                    with open(f"{self.log_dir}/output.jsonl", "a") as f:
+                    with open(f"{self.save_replay_dir}/output.jsonl", "a") as f:
                         f.write(json.dumps({"turn": battle.turn,
                                             "system_prompt": system_prompt,
                                             "user_prompt": state_prompt_io,
@@ -786,9 +786,10 @@ class GPTPlayer(Player):
                     continue
 
             if next_action is None:
+                self.except_cnt += 1
                 next_action = self.choose_max_damage_move(battle)
-            return next_action
 
+            return next_action
 
     def battle_summary(self):
 

@@ -8,13 +8,13 @@ import torch
 
 class LLMPlayer(GPTPlayer):
     def __init__(self,
-                 model=None,
-                 save_replay_dir="",
+                 model,
+                 config,
+                 save_replay_dir,
                  account_configuration=None,
                  server_configuration=None,
-                 config=None,
                  ):
-        super().__init__(battle_format=config.battle_format,
+        super().__init__(config=config,
                          account_configuration=account_configuration,
                          server_configuration=server_configuration)
 
@@ -43,7 +43,7 @@ class LLMPlayer(GPTPlayer):
             return next_action
 
         # state_prompt = self.state_translate(battle)
-        system_prompt, state_prompt = self.state_translate(battle, self.config)
+        system_prompt, state_prompt = self.state_translate(battle)
 
         if battle.active_pokemon.fainted:
             constraint_prompt = '''Choose the most suitable pokemon to switch. Your output MUST be a JSON like: {"switch":"<switch_pokemon_name>"}\n'''
