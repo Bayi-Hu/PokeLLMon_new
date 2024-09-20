@@ -53,11 +53,13 @@ def calculate_move_type_damage_multipier(type_1, type_2, type_chart, constraint_
         extreme_resistant_type_list = list(set(extreme_resistant_type_list).intersection(set(constraint_type_list)))
         immune_type_list = list(set(immune_type_list).intersection(set(constraint_type_list)))
 
-    return (list(map(lambda x: x.capitalize(), extreme_type_list)),
-           list(map(lambda x: x.capitalize(), effective_type_list)),
-           list(map(lambda x: x.capitalize(), resistant_type_list)),
-           list(map(lambda x: x.capitalize(), extreme_resistant_type_list)),
-           list(map(lambda x: x.capitalize(), immune_type_list)))
+    return extreme_type_list, effective_type_list, resistant_type_list, extreme_resistant_type_list, immune_type_list
+
+    # return (list(map(lambda x: x.capitalize(), extreme_type_list)),
+    #        list(map(lambda x: x.capitalize(), effective_type_list)),
+    #        list(map(lambda x: x.capitalize(), resistant_type_list)),
+    #        list(map(lambda x: x.capitalize(), extreme_resistant_type_list)),
+    #        list(map(lambda x: x.capitalize(), immune_type_list)))
 
 def move_type_damage_wraper(pokemon, type_chart, constraint_type_list=None):
 
@@ -74,24 +76,24 @@ def move_type_damage_wraper(pokemon, type_chart, constraint_type_list=None):
 
     move_type_damage_prompt = ""
     if extreme_effective_type_list:
-        move_type_damage_prompt = (move_type_damage_prompt + " " + ", ".join(extreme_effective_type_list) +
-                                   f"-type attack is extremely-effective (4x damage) to {pokemon.species}.")
+        move_type_damage_prompt = (move_type_damage_prompt + ", ".join(extreme_effective_type_list) +
+                                   f" attack is extremely-effective (4x damage) to {pokemon.species}.")
 
     if effective_type_list:
-        move_type_damage_prompt = (move_type_damage_prompt + " " + ", ".join(effective_type_list) +
-                                   f"-type attack is super-effective (2x damage) to {pokemon.species}.")
+        move_type_damage_prompt = (move_type_damage_prompt + ", ".join(effective_type_list) +
+                                   f" attack is super-effective (2x damage) to {pokemon.species}.")
 
     if resistant_type_list:
-        move_type_damage_prompt = (move_type_damage_prompt + " " + ", ".join(resistant_type_list) +
-                                   f"-type attack is ineffective (0.5x damage) to {pokemon.species}.")
+        move_type_damage_prompt = (move_type_damage_prompt + ", ".join(resistant_type_list) +
+                                   f" attack is ineffective (0.5x damage) to {pokemon.species}.")
 
     if extreme_resistant_type_list:
-        move_type_damage_prompt = (move_type_damage_prompt + " " + ", ".join(extreme_resistant_type_list) +
-                                   f"-type attack is highly ineffective (0.25x damage) to {pokemon.species}.")
+        move_type_damage_prompt = (move_type_damage_prompt + ", ".join(extreme_resistant_type_list) +
+                                   f" attack is highly ineffective (0.25x damage) to {pokemon.species}.")
 
     if immune_type_list:
-        move_type_damage_prompt = (move_type_damage_prompt + " " + ", ".join(immune_type_list) +
-                                   f"-type attack is zero effect (0x damage) to {pokemon.species}.")
+        move_type_damage_prompt = (move_type_damage_prompt + ", ".join(immune_type_list) +
+                                   f" attack is zero effect (0x damage) to {pokemon.species}.")
 
     return move_type_damage_prompt
 
@@ -125,20 +127,20 @@ class GPTPlayer(Player):
         self.api_key = api_key
         self.prompt_algo = prompt_algo
         self.gen = GenData.from_format(battle_format)
-        with open("data/static/moves/moves_effect.json", "r") as f:
+
+        with open("src/data/static/moves/moves_effect.json", "r") as f:
             self.move_effect = json.load(f)
-        with open("data/static/moves/gen8pokemon_move_dict.json", "r") as f:
+        with open("src/data/static/moves/gen8pokemon_move_dict.json", "r") as f:
             self.pokemon_move_dict = json.load(f)
-        with open("data/static/abilities/ability_effect.json", "r") as f:
+        with open("src/data/static/abilities/ability_effect.json", "r") as f:
             self.ability_effect = json.load(f)
-        with open("data/static/abilities/gen8pokemon_ability_dict.json", "r") as f:
+        with open("src/data/static/abilities/gen8pokemon_ability_dict.json", "r") as f:
             self.pokemon_ability_dict = json.load(f)
-        with open("data/static/items/item_effect.json", "r") as f:
+        with open("src/data/static/items/item_effect.json", "r") as f:
             self.item_effect = json.load(f)
-        with open("data/static/items/gen8pokemon_item_dict.json", "r") as f:
+        with open("src/data/static/items/gen8pokemon_item_dict.json", "r") as f:
             self.pokemon_item_dict = json.load(f)
 
-        self.last_plan = ""
         self.SPEED_TIER_COEFICIENT = 0.1
         self.HP_FRACTION_COEFICIENT = 0.4
 
@@ -220,9 +222,9 @@ class GPTPlayer(Player):
         return False
 
 
-    def state_translate(self, battle: AbstractBattle):
+    def state_translate(self, battle: AbstractBattle, config):
 
-        n_turn = 3
+        n_turn = config.T
         if "p1" in list(battle.team.keys())[0]:
             context_prompt = (f"Historical turns:\n" + "\n".join(
                 battle.battle_msg_history.split("[sep]")[-1 * (n_turn + 1):]).
@@ -361,7 +363,7 @@ class GPTPlayer(Player):
         side_condition_prompt = ",".join(side_condition_list)
 
         if side_condition_prompt:
-            active_pokemon_prompt = active_pokemon_prompt + "Your team's side condition: " + side_condition_prompt + "\n"
+            active_pokemon_prompt = active_pokemon_prompt + ", your side condition: " + side_condition_prompt + "\n"
         else:
             active_pokemon_prompt += "\n"
 
@@ -387,13 +389,28 @@ class GPTPlayer(Player):
                             (f"Cate:{move_category}," if move_category else "") +
                             f"Power:{power},Acc:{round(move.accuracy * self.boost_multiplier('accuracy', active_boosts['accuracy'])*100)}%"
                             )
-            # if knowledge:
-            #     try:
-            #         effect = self.move_effect[move.id]
-            #     except:
-            #         effect = ""
-            #     move_prompt += f",Effect:{effect}\n"
-            move_prompt += "\n"
+            # add knowledge
+            if config.knowledge:
+                try:
+                    effect = self.move_effect[move.id]
+                except:
+                    effect = ""
+                move_prompt += f",Effect:{effect}\n"
+            else:
+                move_prompt += "\n"
+
+        # add knowledge
+        if config.knowledge:
+            opponent_move_type_damage_prompt = move_type_damage_wraper(battle.opponent_active_pokemon,
+                                                                       self.gen.type_chart,
+                                                                       team_move_type)
+            if opponent_move_type_damage_prompt:
+                opponent_prompt = opponent_prompt + opponent_move_type_damage_prompt + "\n"
+
+            active_move_type_damage_prompt = move_type_damage_wraper(battle.active_pokemon, self.gen.type_chart,
+                                                                     opponent_type_list)
+            if active_move_type_damage_prompt:
+                active_pokemon_prompt = active_pokemon_prompt + active_move_type_damage_prompt + "\n"
 
         # Switch
         if len(battle.available_switches) > 0:
@@ -441,7 +458,7 @@ class GPTPlayer(Player):
 
     def parse(self, llm_output, battle):
         json_start = llm_output.find('{')
-        json_end = llm_output.rfind('}') + 1 # find the first }
+        json_end = llm_output.find('}') + 1 # find the first }
         json_content = llm_output[json_start:json_end]
         llm_action_json = json.loads(json_content)
         next_action = None
@@ -741,7 +758,7 @@ class GPTPlayer(Player):
                 except:
                     continue
 
-            if llm_output1 is "":
+            if llm_output1 == "":
                 return self.choose_max_damage_move(battle)
 
             for i in range(2):
@@ -771,7 +788,6 @@ class GPTPlayer(Player):
             if next_action is None:
                 next_action = self.choose_max_damage_move(battle)
             return next_action
-
 
 
     def battle_summary(self):

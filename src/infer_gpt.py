@@ -2,7 +2,10 @@ import asyncio
 from tqdm import tqdm
 import numpy as np
 import os
+import hydra
+import logging
 import pickle as pkl
+from omegaconf import OmegaConf, DictConfig
 import argparse
 from client.account_configuration import AccountConfiguration
 
@@ -15,7 +18,16 @@ parser.add_argument("--prompt_algo", default="io", choices=["io", "sc", "cot", "
 parser.add_argument("--log_dir", type=str, default="./battle_log/pokellmon_vs_bot")
 args = parser.parse_args()
 
-async def main():
+
+OmegaConf.register_new_resolver("get_local_run_dir", lambda exp_name, local_dirs: get_local_run_dir(exp_name, local_dirs))
+
+@hydra.main(version_base=None, config_path="config", config_name="config")
+def entry_point(config: DictConfig):
+    logging.getLogger().setLevel(logging.CRITICAL)
+    # Running the async main function
+    asyncio.get_event_loop().run_until_complete(main(config))
+
+async def main(config: DictConfig):
 
     heuristic_player = HeuristicsPlayer(battle_format="gen8randombattle")
 
@@ -47,4 +59,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.get_event_loop().run_until_complete(main())
+    entry_point()

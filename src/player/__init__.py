@@ -22,9 +22,6 @@ from src.client import Client
 
 __all__ = [
     "openai_api",
-    "player",
-    "random_player",
-    "env_utils",
     "ActType",
     "ObsType",
     "ForfeitBattleOrder",
@@ -33,6 +30,8 @@ __all__ = [
     "Client",
     "Player",
     "RandomPlayer",
+    "GPTPlayer",
+    "LLMPlayer",
     "cross_evaluate",
     "background_cross_evaluate",
     "background_evaluate_player",

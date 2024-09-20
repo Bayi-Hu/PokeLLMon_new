@@ -7,6 +7,9 @@ exp_name: ???
 # the batch size for training; for FSDP, the batch size per GPU is batch_size / (grad_accumulation_steps * num_gpus)
 batch_size: 4
 
+# play with knowledge
+knowledge: flase
+
 # wandb configuration
 wandb:
   enabled: true
@@ -27,6 +30,12 @@ local_run_dir: ${get_local_run_dir:${exp_name},${local_dirs}}
 # the learning rate
 lr: 5e-7
 
+# Window size for historical turn information
+T: 0
+
+# temperature for generation
+temperature: 1
+
 # number of steps to accumulate over for each batch
 #   (e.g. if batch_size=4 and gradient_accumulation_steps=2, then we will
 #   accumulate gradients over 2 microbatches of size 2)
@@ -39,7 +48,7 @@ max_grad_norm: 10.0
 max_length: 1024
 
 # the maximum allowed length for output
-max_output_length: 200
+max_output_length: 20
 
 # The optimizer to use; we use RMSprop because it works about as well as Adam and is more memory-efficient
 optimizer: RMSprop
@@ -50,23 +59,12 @@ warmup_steps: 150
 # whether or not to use activation/gradient checkpointing
 activation_checkpointing: false
 
-# evaluate model every eval_every steps
-eval_every: 2_000
-
 # save model
 save_every: null
 
 # prevent wandb from logging more than once per minimum_log_interval_secs
 minimum_log_interval_secs: 1.0
 
-# reward model ckpt_dir
-reward_model: ../QPO/ckpt_dir/llama7b_reward_model_lr1e-5_20240722_0015/LATEST/rm.pt
-
-# the generated file for scoring
-generated_file: null
-
-# target for reward
-target: null
 
 defaults:
 - _self_

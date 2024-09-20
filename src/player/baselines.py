@@ -12,10 +12,6 @@ from src.data.gen_data import GenData
 from src.player.battle_order import BattleOrder
 
 
-with open("./data/static/moves/moves_effect.json", "r") as f:
-    move_effect = json.load(f)
-
-
 def calculate_move_type_damage_multipier(type_1, type_2, type_chart, constraint_type_list):
     TYPE_list = 'BUG,DARK,DRAGON,ELECTRIC,FAIRY,FIGHTING,FIRE,FLYING,GHOST,GRASS,GROUND,ICE,NORMAL,POISON,PSYCHIC,ROCK,STEEL,WATER'.split(",")
 
@@ -198,18 +194,7 @@ class HeuristicsPlayer(Player):
         if isinstance(battle, DoubleBattle):
             return self.choose_random_doubles_move(battle)
 
-        # calculate reward for the last step
-        # last_action_reward = self.calc_reward(battle)
         self.gen = GenData.from_format(self.format)
-        # with open("./poke_env/data/static/moves/gen8moves_effect.json", "r") as f:
-        #     self.move_effect = json.load(f)
-        # with open("./poke_env/data/static/moves/gen8_pokemon_move_dict.json", "r") as f:
-        #     self.pokemon_move_dict = json.load(f)
-
-        # state_prompt = self.state_translate(battle) # for dump data
-        # dump_log = {"prompt":state_prompt.lower() + "Output:"}
-        # abilities
-
         for mon in battle.team.values():
             self.move_set = self.move_set.union(set(mon.moves.keys()))
             self.item_set.add(mon.item)
@@ -233,42 +218,6 @@ class HeuristicsPlayer(Player):
                     except:
                         self.pokemon_move_dict[mon.species] = {}
                         self.pokemon_move_dict[mon.species][name] = [name, move.type.name, move.base_power, 1]
-
-        # try:
-        #     self.pokemon_move_dict[mon.species]
-        # except:
-
-        # pokemon_ability_dict = {}
-        # for pokemon_name, ability_set in self.pokemon_ability_dict.items():
-        #     pokemon_ability_dict[pokemon_name] = list(ability_set)
-        #
-        # with open("./poke_env/data/static/abilities/gen7pokemon_ability_dict.json", "w") as f:
-        #     json.dump(pokemon_ability_dict, f)
-        #
-        # pokemon_item_dict = {}
-        # for pokemon_name, item_set in self.pokemon_item_dict.items():
-        #     pokemon_item_dict[pokemon_name] = list(item_set - {'', None})
-        #
-        # with open("./poke_env/data/static/items/gen7pokemon_item_dict.json", "w") as f:
-        #     json.dump(pokemon_item_dict, f)
-        #
-        # with open("./poke_env/data/static/moves/gen7pokemon_move_dict.json", "w") as f:
-        #     json.dump(self.pokemon_move_dict, f, indent=4)
-
-        with open("data/static/moves/moves_effect.json", "r") as f:
-            self.move_effect = json.load(f)
-        with open("data/static/abilities/ability_effect.json", "r") as f:
-            self.ability_effect = json.load(f)
-        with open("data/static/items/item_effect.json", "r") as f:
-            self.item_effect = json.load(f)
-
-        set(self.move_effect.keys())
-
-        set(self.ability_effect.keys())
-
-        self.item_set - set(self.item_effect.keys())
-        self.ability_set - set(self.ability_effect.keys())
-        self.move_set - set(self.move_effect.keys())
 
         # Main mons shortcuts
         active = battle.active_pokemon
